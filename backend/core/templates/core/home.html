@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<h1> {{ title }} </h1>
+<p> Содержимое главной страницы:</p>
+
+<ul>
+    {% for i in posts %}
+    <li>
+        <h2>{{ i.name }}</h2>
+        <p>Категория: {{ i.category }}</p>
+        <p>Бренд: {{ i.brand }}</p>
+        <p>Цена: {{ i.price }}</p>
+        <p>Описание: {{ i.description }}</p>
+        <p>Характеристики: {{ i.specifications }}</p>
+        {% if i.image %}
+        <img src="{{ i.image.url }}" alt="{{ i.name }}" style="max-width: 300px; height: auto;">
+        {% else %}
+        <p><em>Изображение отсутствует</em></p>
+        {% endif %}
+        <hr>
+    </li>
+    {% endfor %}
+</ul>    
+{% endblock %}
