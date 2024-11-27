@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import timedelta
 import os
 from pathlib import Path
 from decouple import config
@@ -41,13 +42,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+
+    "psycopg2",
+    "rest_framework",
+    "ckeditor",
+    'django_filters',
+    'drf_spectacular',
+    'rest_framework_simplejwt',
+
+
+
     'backend.core',
     'backend.items',
     'backend.tg_bot',
     'backend.users',
-
-    'drf_spectacular',
-    'ckeditor',
 ]
 
 MIDDLEWARE = [
@@ -137,11 +145,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+CKEDITOR_DEFAULT_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 300,
+        'width': 300,
+    },
+}
+
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join (BASE_DIR , 'media')
 
-REST_FRAMEWORK = {     
-    # ВАШИ НАСТРОЙКИ     
+REST_FRAMEWORK = {        
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -149,8 +165,14 @@ REST_FRAMEWORK = {
     ),
 }
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
+    "REFRESH_TOKEN_LIFETIME": timedelta(minutes=20),
+}
+
+
 TELEGRAM_BOT_TOKEN = config('TELEGRAM_BOT_TOKEN')
 
-#from rest_framework_simplejwt.tokens import RefreshToken
-#token = RefreshToken.for_user(user)
-#print(token.access_token)
+AUTH_USER_MODEL = "users.CustomUser"
+
+

@@ -1,6 +1,9 @@
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import render
-from items.models import *
+from backend.items.models import *
+from .models import MainBanner
+from .serializers import MainBannerSerializer
+from rest_framework import generics, mixins, viewsets
 
 # Create your views here.
 menu = ['О сайте', 'Обратная связь', 'Контакты']
@@ -14,3 +17,8 @@ def about(request):
 
 def pageNotFound(request, exception):
     return HttpResponseNotFound('<h1>Страница не найдена</h1>', status = 404)
+
+
+class MainBannerViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = MainBanner.objects.all()
+    serializer_class = MainBannerSerializer
