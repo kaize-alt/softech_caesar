@@ -90,8 +90,8 @@ class  CartItem(models.Model):
         return self.product.name
 
 class Like(models.Model):
-    user = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="likes")
-    product = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="products")
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="likes")
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="products")
     is_like = models.BooleanField(default=False)
 
     class Meta:

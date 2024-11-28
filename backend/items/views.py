@@ -1,20 +1,21 @@
 from http.client import HTTPResponse
 from wsgiref.util import request_uri
-
 from django.shortcuts import render
-from rest_framework import generics, mixins, viewsets, filters, status
-from django.core.exceptions import ObjectDoesNotExist
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import generics, mixins, viewsets, filters, status
 
 from .filters import ProductFilter
 from .models import *
 from .serializers import *
-from django_filters.rest_framework import DjangoFilterBackend
-
 from ..core.serializers import LikeSerializers
+
+
 
 
 class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -22,6 +23,9 @@ class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = CategorySerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = [JWTAuthentication,]
+    
+    def get_queryset(self):
+        return Category.objects.filter(parent_category__isnull=True)
 
 
 class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -30,14 +34,33 @@ class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
 
-class ProductsViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
-    serializer_class = ProductSerializer
+class ProductsListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializerList
+    permission_classes = (permissions.AllowAny,)
+    authentication_classes = [JWTAuthentication,]
 
     def get_queryset(self):
-        category_id = self.kwargs['category_id']
-        subcategories = Category.subcategories.objects.filter(category_id=category_id)
-        return Product.objects.filter(subcategory__in=subcategories)
+        category_id = self.request.query_params.get('category_id')
+        if category_id:
+            return Product.objects.filter(category_id=category_id)
+        return super().get_queryset()
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('category_id', type=int, description='ID категории', required=False)
+        ]
+    )
+
+    @action(detail=False, methods=["get"])
+    def by_category(self, request):
+        category_id = request.query_params.get("category_id")
+        if category_id:
+            products = self.get_queryset()
+            serializer = self.get_serializer(products, many=True)
+            return Response(serializer.data) 
+        return Response({"detail": "Не указана категория."}, status=400)
+#http://127.0.0.1:8000/api/products/by_category/?category_id=2
 
 class ProductDetailViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Product.objects.all()
@@ -120,10 +143,14 @@ class LikeViewSet(viewsets.ViewSet):
 
     def create(self, request):
         product_id = request.data.get("product_id")
+        is_like = request.data.get("is_like", True)  
         try:
             product = Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             return Response({"error": "Товар не найден"}, status=status.HTTP_404_NOT_FOUND)
 
-        product.likes.add(request.user)
-        return Response({"message": "Товар добавлен в избранное"})
+        like, created = Like.objects.get_or_create(user=request.user, product=product)
+        like.is_like = is_like
+        like.save()
+
+        return Response({"message": "Статус лайка обновлен"})

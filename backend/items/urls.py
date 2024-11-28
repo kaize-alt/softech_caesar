@@ -9,7 +9,7 @@ items_router = routers.DefaultRouter()
 
 items_router.register(r"Category", CategoryViewSet, basename="category")
 items_router.register(r"sub_category", SubCategoryViewSet, basename="sub_category")
-items_router.register(r"products", ProductsViewSet, basename="products")
+items_router.register(r"products", ProductsListViewSet, basename="products")
 items_router.register(r"product_detail", ProductDetailViewSet, basename="product_detail")
 items_router.register(r"cart", CartViewSet, basename="cart")
 items_router.register(r"item_delete", CartItemViewSet, basename="item_delete")
