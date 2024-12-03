@@ -55,3 +55,10 @@ class Videos(models.Model):
 
     def __str__(self):
         return self.title
+
+class MainSettings(models.Model):
+    privacy_policy = models.FileField("Политика конфиденциальности")
+
+    class Meta:
+        verbose_name = "Основная настройка"
+        verbose_name_plural = "Основные настройки"

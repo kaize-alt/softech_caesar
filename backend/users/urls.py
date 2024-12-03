@@ -1,7 +1,10 @@
 from django.urls import path
 
 from .views import *
+from rest_framework import routers
 
-urlpatterns = [
-    path('users/<slug:users_page>/', usersIndex),
-]
+from .views import UserRegisterViewSet
+
+user_router = routers.DefaultRouter()
+
+user_router.register(r"registry", UserRegisterViewSet, basename="registry")

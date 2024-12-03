@@ -27,10 +27,12 @@ from rest_framework_simplejwt.views import (
 )
 from backend.core.urls import core_router
 from backend.items.urls import items_router
+from backend.users.urls import user_router
 
 router = routers.DefaultRouter()
 router.registry.extend(core_router.registry)
 router.registry.extend(items_router.registry)
+router.registry.extend(user_router.registry)
 
 
 
