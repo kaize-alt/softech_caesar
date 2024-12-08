@@ -30,3 +30,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('is_read')
         return user
 
+
+class LoginSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ("email", "password")
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    class Meta:
+        model = CustomUser
+        fields = ("email",)
+

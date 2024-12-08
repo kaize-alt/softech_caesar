@@ -78,79 +78,98 @@ class CartViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         user = request.user
+        print(user)
         items = request.data.get("items", [])
 
         cart, _ = Cart.objects.get_or_create(user=user)
-
+        print(cart)
         for item in items:
             product_id = item.get("product")
+            print(product_id)
             amount = item.get("amount", 1)
 
             try:
                 product = Product.objects.get(id=product_id)
+                print(product)
             except Product.DoesNotExist:
-                return Response(
-                    {"error": f"Продукт с ID {product_id} не найден"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                return Response({"error": f"Продукт с ID {product_id} не найден"}, status=400)
 
-            cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
-            if not created:
-                cart_item.amount += amount
-                cart_item.save()
-            else:
-                cart_item.amount = amount
-                cart_item.save()
+            cart_item, _ = CartItem.objects.get_or_create(cart=cart, product=product)
+            print("Nomad")
+            cart_item.amount += amount
+            cart_item.save(update_fields=["amount"])
 
-      
-        serializer = self.get_serializer(cart)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(CartSerializer(cart).data)
 
 class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [JWTAuthentication,]
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+
+        try:
+            cart = Cart.objects.get(user=user)
+        except Cart.DoesNotExist:
+            return Response({"error": "Корзина пользователя не найдена"}, status=status.HTTP_404_NOT_FOUND)
+
+        product_id = kwargs.get("pk")
+
+        if not product_id:
+            return Response({"error": "Поле product не указано в URL"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cart_item = CartItem.objects.get(cart=cart, product_id=product_id)
+            cart_item.delete()
+            return Response({"success": "Товар был удален из корзины"}, status=status.HTTP_200_OK)
+        except CartItem.DoesNotExist:
+            return Response({"error": "Товар не найден в корзине"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class CartItemListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    serializer_class = CartItemSerializer
+    serializer_class = CartItemAmountSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
-        return CartItem.objects.filter(cart__user=self.request.user)
+        user = self.request.user
+        return CartItem.objects.filter(cart__user=user)
 
 class CartItemUpdateViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
     queryset = CartItem.objects.all()
     serializer_class = CartItemUpdateSerializer
     permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication]
 
-class CartTotalPriceViewSet(viewsets.ViewSet):
-    serializer_class = CartTotalPriceSerializer
+    def get_queryset(self):
+        user = self.request.user
+        cart = self.request.user.cart
+        return CartItem.objects.filter(cart__user=user, cart=cart)
+
+
+class CartTotalPriceViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Cart.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication]
 
-    def list(self, request):
-        cart = Cart.objects.get(user=request.user)
-        total_price = sum(item.product.price * item.amount for item in cart.cartitem_set.all())
+    def list(self, request, *args, **kwargs):
+        cart = request.user.cart
+
+        total_price = 0
+        for item in cart.items.all():
+            total_price += item.total_price
+
         return Response({"total_price": total_price})
 
-class LikeViewSet(viewsets.ViewSet):
+
+class LikeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    queryset = Like.objects.all()
     serializer_class = LikeSerializers
     permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication]
 
-    def create(self, request):
-        product_id = request.data.get("product_id")
-        is_like = request.data.get("is_like", True)  
-        try:
-            product = Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            return Response({"error": "Товар не найден"}, status=status.HTTP_404_NOT_FOUND)
-
-        like, created = Like.objects.get_or_create(user=request.user, product=product)
-        like.is_like = is_like
+    def create(self, request, *args, **kwargs):
+        user = request.user
+        product = request.data.get("product")
+        like = Like.objects.create(user=user, product=product)
+        like.is_like = True
         like.save()
 
-        return Response({"message": "Статус лайка обновлен"})
+        return Response(status=status.HTTP_201_CREATED)
+
