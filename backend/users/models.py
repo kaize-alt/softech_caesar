@@ -38,7 +38,7 @@ class CustomUser(AbstractUser):
     phone_number = models.CharField("Номер телефона", unique=True, max_length=12)
     address = models.CharField("Адрес", max_length=255, null=True, blank=True)
     telegram_username = models.CharField("Username пользователя в телеграм", default="")
-    username = None
+    username = models.CharField("Username пользователя в телеграм", default="")
     USERNAME_FIELD = 'phone_number'
     objects = CustomUserManager()
 

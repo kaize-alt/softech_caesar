@@ -1,69 +1,58 @@
 from django.db import models
-from django.contrib.postgres.fields import JSONField
+from ckeditor.fields import RichTextField
 
 from backend.users.models import CustomUser 
 
 # Create your models here.
 
 class Category(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    parent_category = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-
-        null=True,
-        blank=True,
-        related_name='subcategories'
-    )
-    description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='category_images/', blank=True, null=True)
+    name = models.CharField(max_length=100)
 
     class Meta:
-        verbose_name = "Category"
-        verbose_name_plural = "Categories"
+        verbose_name = "Категория"
+        verbose_name_plural = "Категория"
 
     def __str__(self):
         return self.name
-    
-class Brand(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    country = models.CharField(max_length=255, blank=True, null=True)
 
+class SubCategory(models.Model):
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
+    name = models.CharField(max_length=100)
+    image = models.ImageField("Иконка подкатегории", upload_to="icon_subcategory")
     class Meta:
-        verbose_name = "Brand"
-        verbose_name_plural = "Brands"
+        verbose_name = "Подкатегория"
+        verbose_name_plural = "Подкатегория"
 
     def __str__(self):
-        return self.name
+        return f"{self.category.name}, {self.name}"
 
 class Product(models.Model):
-    name = models.CharField(max_length=255)
-    category = models.ForeignKey(
-        'Category',
-        on_delete=models.CASCADE,
-        related_name='products'
-    )
-    brand = models.ForeignKey(
-        'Brand',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='products'
-    )
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='product_images/%Y/%m/%d/', blank=True, null=True)
-    in_stock = models.BooleanField(default=True)
-    specifications = models.JSONField(blank=True, null=True)  
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
+    subcategory = models.ForeignKey(SubCategory, on_delete=models.CASCADE, related_name='products')
+    name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='products', blank=True, null=True)
+    description = RichTextField("Описание Товара", blank=True, null=True)
+    price = models.DecimalField("Цена Товара", blank=True, null=True, max_digits=10, decimal_places=3)
+    full_desc = RichTextField("Полное описание Товара", blank=True, null=True)
     class Meta:
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        verbose_name = "Продукт"
+        verbose_name_plural = "Продукт"
 
     def __str__(self):
         return self.name
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_image")
+    image = models.ImageField("Картинки Товара")
+
+    class Meta:
+        verbose_name = "Картинка продукта"
+        verbose_name_plural = "Картинки продуктов"
+
+    def __str__(self):
+        return f"Image for {self.product.name}"
+
+
     
 class Cart(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="cart")
@@ -99,4 +88,4 @@ class Like(models.Model):
         verbose_name_plural = "Лайки"
 
     def __str__(self):
-        return self.user
+        return f"{self.user.username} likes {self.product.name}"

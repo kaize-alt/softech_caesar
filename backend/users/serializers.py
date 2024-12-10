@@ -15,11 +15,12 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             "address",
             "password",
             "password_confirm",
-            'is_read',
+            "is_read"
         )
 
     def create(self, validated_data):
         validated_data.pop('password_confirm', None)
+        validated_data.pop("is_read", None)
 
         user = CustomUser(**validated_data)
 
@@ -27,8 +28,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user.set_password(password)
 
         user.save()
-        validated_data.pop('is_read')
         return user
+
 
 
 class LoginSerializer(serializers.ModelSerializer):

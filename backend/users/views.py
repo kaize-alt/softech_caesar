@@ -1,8 +1,14 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.response import Response
+from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST
+
+
+from django.contrib.auth.hashers import check_password
+from django.core.mail import EmailMessage
 
 from .models import CustomUser
 from .serializers import LoginSerializer, ResetPasswordSerializer, UserRegisterSerializer
+from .smtp.sender import smtp
 
 
 class UserRegisterViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -23,14 +29,9 @@ class UserRegisterViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         elif is_read is False:
             return Response({"error": "Вы должны прочитать и согласится с Политика конфиденциальности!"}, status=400)
 
-        if password == password_confirm:
-            # Save the user instance (create user and handle password setting)
-            instance = serializer.save()
-            return Response(self.get_serializer(instance).data)  # Return serialized response
         instance = serializer.save()
         return Response(self.get_serializer(instance).data)
 
-        return Response({"error": "Пароли не совпадают"}, status=400)
 
 
 

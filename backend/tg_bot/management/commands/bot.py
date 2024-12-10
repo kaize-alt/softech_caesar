@@ -1,9 +1,9 @@
 import telebot 
 from django.core.management.base import BaseCommand 
 from django.utils.html import strip_tags 
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton 
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton 
 from backend.items.models import * 
-from backend.users.models import CustomUser 
+from backend.users.models import * 
 from softech import settings
 
 bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN)  #SoftechConsult_bot
@@ -16,26 +16,55 @@ help = (
 )
 
 
-
-
 @bot.message_handler(commands=['start'])
 def start(message):
     text = "Приветствую в магазине MiStore!"
-    username = message.from_user.username
-    fisrt_name = message.from_user.first_name
+    telegram_username = message.chat.username or "Не указан"
+    
+    user = CustomUser.objects.filter(telegram_username=telegram_username).first()
+    
+    if user:
+        text += f"\nС возвращением, {user.telegram_username}!"
+        markup = InlineKeyboardMarkup()
+        button1 = InlineKeyboardButton("Обратиться к специалисту", callback_data="contact")
+        button2 = InlineKeyboardButton("Выбрать товар", callback_data="categories")
+        markup.row(button1)
+        markup.row(button2)
+        bot.send_message(message.chat.id, text, reply_markup=markup)
+    else:
+        text += "\nКажется, вы еще не зарегистрированы. Пожалуйста, предоставьте ваш номер телефона для регистрации."
+        markup = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+        phone_button = KeyboardButton("Отправить номер телефона", request_contact=True)
+        markup.add(phone_button)
+        bot.send_message(message.chat.id, text, reply_markup=markup)
 
-    try:
-        tg_user, _ = CustomUser.objects.get_or_create(username=username, telegram_username=username, first_name=fisrt_name)
-    except Exception as e:
-        bot.send_message(message.chat.id, f"Ошибка при создании пользователя: {str(e)}")
-        return
 
-    markup = InlineKeyboardMarkup()
-    button1 = InlineKeyboardButton("Обратиться к специалисту", callback_data="contact")
-    button2 = InlineKeyboardButton("Выбрать товар", callback_data="categories")
-    markup.add(button1, button2)
-
-    bot.send_message(message.chat.id, text, reply_markup=markup)
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    if message.contact is not None:
+        phone_number = message.contact.phone_number
+        telegram_username = message.chat.username or "Не указан"
+        
+        user = CustomUser.objects.filter(phone_number=phone_number).first()
+        if user:
+            bot.send_message(
+                message.chat.id,
+                f"Вы уже зарегистрированы! Ваш номер: {phone_number}"
+            )
+        else:
+            CustomUser.objects.create_user(
+                phone_number=phone_number,
+                telegram_username=telegram_username
+            )
+            bot.send_message(
+                message.chat.id,
+                "Вы успешно зарегистрированы! Теперь вы можете пользоваться ботом."
+            )
+    else:
+        bot.send_message(
+            message.chat.id,
+            "Не удалось получить номер телефона. Попробуйте еще раз."
+        )
 
 
 
@@ -118,16 +147,25 @@ def cart(call):
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("order_"))
 def order(call):
-    cart_item = CartItem.objects.filter(cart=call.data.split("_")[1])
-    item_list = [item.amount * item.product.price for item in cart_item]
-    sum = []
-    for item in cart_item:
-        sum.append(strip_tags(item.product.name))
-        print(item)
+    try:
+        cart = Cart.objects.get(id=call.data.split("_")[1])
+        cart_items = CartItem.objects.filter(cart=cart)
+        
+        if not cart_items.exists():
+            bot.send_message(call.message.chat.id, "Корзина пуста.")
+            return
+        
+        item_list = [
+            f"{item.product.name} x{item.amount} = {item.total_price}₽"
+            for item in cart_items
+        ]
+        total_sum = sum(item.total_price for item in cart_items)
+        text = "Ваши товары:\n" + "\n".join(item_list) + f"\nИтоговая сумма: {total_sum}₽"
+        bot.send_message(call.message.chat.id, text)
+    except Exception as e:
+        bot.send_message(call.message.chat.id, "Произошла ошибка при обработке заказа.")
+        print(e)
 
-    text = f"Ваш товар в корзине " + "\n" + "\n".join(sum) + f"\nTotal sum: {sum(item_list)}"
-    bot.send_message(call.message.chat.id, text)
-    print(item_list)
 
 
 class Command(BaseCommand):

@@ -1,21 +1,20 @@
 from http.client import HTTPResponse
 from wsgiref.util import request_uri
-from django.shortcuts import render
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from rest_framework.decorators import action
+from django.shortcuts import render
+from rest_framework import generics, mixins, viewsets, filters, status
+from django.core.exceptions import ObjectDoesNotExist
+
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, mixins, viewsets, filters, status
 
 from .filters import ProductFilter
 from .models import *
 from .serializers import *
+from django_filters.rest_framework import DjangoFilterBackend
+
 from ..core.serializers import LikeSerializers
-
-
 
 
 class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -23,9 +22,6 @@ class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = CategorySerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = [JWTAuthentication,]
-    
-    def get_queryset(self):
-        return Category.objects.filter(parent_category__isnull=True)
 
 
 class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -34,33 +30,10 @@ class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
 
-class ProductsListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductSerializerList
-    permission_classes = (permissions.AllowAny,)
-    authentication_classes = [JWTAuthentication,]
+class ProductsViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = SubCategory.objects.all()
+    serializer_class = ProductSerializer
 
-    def get_queryset(self):
-        category_id = self.request.query_params.get('category_id')
-        if category_id:
-            return Product.objects.filter(category_id=category_id)
-        return super().get_queryset()
-
-    @extend_schema(
-        parameters=[
-            OpenApiParameter('category_id', type=int, description='ID категории', required=False)
-        ]
-    )
-
-    @action(detail=False, methods=["get"])
-    def by_category(self, request):
-        category_id = request.query_params.get("category_id")
-        if category_id:
-            products = self.get_queryset()
-            serializer = self.get_serializer(products, many=True)
-            return Response(serializer.data) 
-        return Response({"detail": "Не указана категория."}, status=400)
-#http://127.0.0.1:8000/api/products/by_category/?category_id=2
 
 class ProductDetailViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Product.objects.all()
@@ -101,6 +74,7 @@ class CartViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
         return Response(CartSerializer(cart).data)
 
+
 class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
@@ -126,13 +100,14 @@ class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
             return Response({"error": "Товар не найден в корзине"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class CartItemListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class CardItemListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = CartItemAmountSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
         user = self.request.user
         return CartItem.objects.filter(cart__user=user)
+
 
 class CartItemUpdateViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
     queryset = CartItem.objects.all()
@@ -172,4 +147,3 @@ class LikeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         like.save()
 
         return Response(status=status.HTTP_201_CREATED)
-
