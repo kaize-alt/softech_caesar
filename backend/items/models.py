@@ -1,5 +1,6 @@
 from django.db import models
 from ckeditor.fields import RichTextField
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from backend.users.models import CustomUser 
 
@@ -19,6 +20,7 @@ class SubCategory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
     name = models.CharField(max_length=100)
     image = models.ImageField("Иконка подкатегории", upload_to="icon_subcategory")
+    description = RichTextField(verbose_name="Описание категории", blank=True, null=True)
     class Meta:
         verbose_name = "Подкатегория"
         verbose_name_plural = "Подкатегория"
@@ -28,17 +30,53 @@ class SubCategory(models.Model):
 
 class Product(models.Model):
     subcategory = models.ForeignKey(SubCategory, on_delete=models.CASCADE, related_name='products')
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=255)
     image = models.ImageField(upload_to='products', blank=True, null=True)
-    description = RichTextField("Описание Товара", blank=True, null=True)
-    price = models.DecimalField("Цена Товара", blank=True, null=True, max_digits=10, decimal_places=3)
-    full_desc = RichTextField("Полное описание Товара", blank=True, null=True)
+    description = RichTextField(verbose_name="Описание товара", blank=True, null=True)
+    price = models.DecimalField(verbose_name="Цена товара", blank=True, null=True, max_digits=10, decimal_places=3)
+    full_desc = RichTextField(verbose_name="Полное описание товара", blank=True, null=True)
+    total_rating = models.FloatField(default=0)  
+    rating_count = models.IntegerField(default=0)  
+    created_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         verbose_name = "Продукт"
-        verbose_name_plural = "Продукт"
+        verbose_name_plural = "Продукты"
 
     def __str__(self):
         return self.name
+
+    @property
+    def average_rating(self):
+        return self.total_rating / self.rating_count if self.rating_count > 0 else 0
+
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    text = models.TextField(blank=True, null=True) 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Отзыв"
+        verbose_name_plural = "Отзывы"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if not is_new:
+            old_review = Review.objects.get(pk=self.pk)
+            self.product.total_rating -= old_review.rating
+        self.product.total_rating += self.rating
+        self.product.rating_count += 1 if is_new else 0
+        self.product.save()
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.product.total_rating -= self.rating
+        self.product.rating_count -= 1
+        self.product.save()
+        super().delete(*args, **kwargs)
 
 
 class ProductImage(models.Model):

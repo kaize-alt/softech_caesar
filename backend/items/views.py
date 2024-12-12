@@ -4,10 +4,14 @@ from wsgiref.util import request_uri
 from django.shortcuts import render
 from rest_framework import generics, mixins, viewsets, filters, status
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import F, Case, When, FloatField
+
 
 from rest_framework.response import Response
 from rest_framework import permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework import filters
+
 
 from .filters import ProductFilter
 from .models import *
@@ -30,18 +34,37 @@ class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
 
-class ProductsViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+class ProductsBySubcategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = SubCategory.objects.all()
-    serializer_class = ProductSerializer
+    serializer_class = ProductsBySubcategorySerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        subcategory = self.get_object()
+        products = subcategory.products.all()  # Получение продуктов, связанных с подкатегорией
+        ordering = self.request.query_params.get('ordering')
+
+        if ordering in ['price', '-price', 'created_at', '-created_at']:
+            products = products.order_by(ordering)
+
+        serializer = self.get_serializer(subcategory)
+        data = serializer.data
+        data['products'] = ProductSerializerList(products, many=True).data
+        return Response(data)
 
 
-class ProductDetailViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
-    queryset = Product.objects.all()
-    serializer_class = ProductDetailsSerializer
-    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
+
+class ProductSearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Product.objects.prefetch_related('product_image', 'reviews__user').all()
+    serializer_class = ProductSearchSerializer
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
     filterset_class = ProductFilter
     search_fields = {"name": ["icontains"]}
+    ordering_fields = ['price', 'created_at']  # Поля для сортировки
+    ordering = ['-created_at']
 
+class ProductDetailsViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductDetailsSerializer
 
 
 class CartViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -147,3 +170,12 @@ class LikeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         like.save()
 
         return Response(status=status.HTTP_201_CREATED)
+    
+class ReviewCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        """Автоматически добавляем пользователя в данные"""
+        serializer.save(user=self.request.user)
