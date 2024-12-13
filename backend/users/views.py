@@ -1,14 +1,13 @@
+from django.contrib.auth.hashers import check_password
+from django.core.mail import EmailMessage
+
 from rest_framework import mixins, viewsets, status
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK, HTTP_404_NOT_FOUND, HTTP_400_BAD_REQUEST
 
-
-from django.contrib.auth.hashers import check_password
-from django.core.mail import EmailMessage
-
 from .models import CustomUser
-from .serializers import LoginSerializer, ResetPasswordSerializer, UserRegisterSerializer
-from .smtp.sender import smtp
+from .serializers import UserRegisterSerializer, LoginSerializer, ResetPasswordSerializer
+from .celery_tasks import send_email
 
 
 class UserRegisterViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -28,11 +27,8 @@ class UserRegisterViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             return Response({"error": "Пароли не совпадают"}, status=400)
         elif is_read is False:
             return Response({"error": "Вы должны прочитать и согласится с Политика конфиденциальности!"}, status=400)
-
         instance = serializer.save()
         return Response(self.get_serializer(instance).data)
-
-
 
 
 class LoginViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
@@ -53,7 +49,7 @@ class LoginViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response({"error": "Пользователь с такой почтой не найден"}, status=HTTP_404_NOT_FOUND)
 
 
-class ResetPasswordViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class ResetPasswordViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = ResetPasswordSerializer
 
@@ -63,14 +59,6 @@ class ResetPasswordViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         email = serializer.validated_data.get("email")
         user_email = CustomUser.objects.filter(email=email).first()
         if user_email:
-            connection = smtp()
-            message_text = "Для сброса и обновления пароля перейдите по ссылке: "
-            message = EmailMessage(
-                subject="Письмо для сброса и обновления пароля",
-                body=message_text,
-                from_email="omurkanovd22@gmail.com",
-                to=[email]
-            )
-            connection.send_messages([message])
+            send_email.delay(email)
             return Response(self.get_serializer(serializer.instance).data)
         return Response({"error": "Пользователь с такой почтой не найдет"}, status=HTTP_404_NOT_FOUND)
