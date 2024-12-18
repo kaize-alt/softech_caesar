@@ -81,14 +81,15 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                'django.contrib.auth.context_processors.auth',  # Для аутентификации
+                'django.contrib.messages.context_processors.messages',  # Для сообщений
+                'django.template.context_processors.request',  # Для контекста HTTP-запроса
             ],
         },
     },
 ]
+
+
 
 WSGI_APPLICATION = 'softech.wsgi.application'
 
@@ -102,8 +103,8 @@ DATABASES = {
         'NAME': env('DB_NAME'),
         'USER': env('DB_USER'),
         'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST', default='localhost'),
-        'PORT': env('DB_PORT', default='5432'),
+        'HOST': env('DB_HOST'),
+        'PORT': env('DB_PORT'),
     }
 }
 
@@ -161,6 +162,8 @@ CKEDITOR_DEFAULT_envS = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join (BASE_DIR , 'media')
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 REST_FRAMEWORK = {        
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 
@@ -181,11 +184,16 @@ TELEGRAM_BOT_TOKEN = env('TELEGRAM_BOT_TOKEN')
 
 AUTH_USER_MODEL = "users.CustomUser"
 
+EMAIL_BACKEND = env("EMAIL_BACKEND")
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env("EMAIL_PORT")
-EMAIL_ADDRESS = env("EMAIL_ADDRESS")
-EMAIL_PASSWORD = env("EMAIL_PASSWORD")
+EMAIL_USE_TLS = env("EMAIL_USE_TLS")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 
+DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER")
+SERVER_EMAIL = env("EMAIL_HOST_USER")
+EMAIL_ADMIN = env("EMAIL_HOST_USER")
 
 REDIS_HOST = env("REDIS_HOST")
 REDIS_PORT = env("REDIS_PORT")
@@ -195,7 +203,7 @@ REDIS_CELERY_DB = env("REDIS_CELERY_DB")
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://localhost:6379/0",
+        "LOCATION": "redis://localhost:6379/0",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -204,13 +212,13 @@ CACHES = {
 
 
 # Настройки Celery
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # URL брокера (Redis)
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_URL = env("CELERY_BROKER_URL")  # URL брокера (Redis)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = env("CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP")
 
 
 CELERY_BEAT_SCHEDULE = {
     'Send hello message': {
-        'task': 'backend.userscelery_tasks.send_email_beat',
+        'task': 'backend.users.celery_tasks.send_email_beat',
         'schedule': crontab(minute='*'),
     }
 }

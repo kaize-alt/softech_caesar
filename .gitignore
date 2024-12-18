@@ -1,138 +1,85 @@
-# Django #
-*.log
-*.pot
+# Python
 *.pyc
-__pycache__
+*.pyo
+*.pyd
+__pycache__/
+*.swp
+
+# Django
 db.sqlite3
-media
+*.log
+media/
+staticfiles/
 
-# Backup files # 
-*.bak 
+# Docker
+*.env
+*.env.*
+*.pid
+docker-compose.override.yml
+.dockerignore
+# Исключаем данные контейнеров PostgreSQL, Redis и volumes
+volumes/
+postgres_data/
+redisdata/
+static_volume/
+media_volume/
 
-# If you are using PyCharm # 
-# User-specific stuff
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/usage.statistics.xml
-.idea/**/dictionaries
-.idea/**/shelf
+# VS Code
+.vscode/
+*.code-workspace
 
-# AWS User-specific
-.idea/**/aws.xml
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# Generated files
-.idea/**/contentModel.xml
+# PyCharm
+.idea/
+*.iml
 
-# Sensitive or high-churn files
-.idea/**/dataSources/
-.idea/**/dataSources.ids
-.idea/**/dataSources.local.xml
-.idea/**/sqlDataSources.xml
-.idea/**/dynamic.xml
-.idea/**/uiDesigner.xml
-.idea/**/dbnavigator.xml
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
 
-# Gradle
-.idea/**/gradle.xml
-.idea/**/libraries
+# Logs
+*.log
 
-# File-based project format
-*.iws
+# Compiled files
+*.so
+*.dll
+*.dylib
+*.out
+*.exe
 
-# IntelliJ
-out/
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
 
-# JIRA plugin
-atlassian-ide-plugin.xml
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
 
-# Python # 
-*.py[cod] 
-*$py.class 
+# Celery and Redis
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
+celerybeat.pid
 
-# Distribution / packaging 
-.Python build/ 
-develop-eggs/ 
-dist/ 
-downloads/ 
-eggs/ 
-.eggs/ 
-lib/ 
-lib64/ 
-parts/ 
-sdist/ 
-var/ 
-wheels/ 
-*.whl
-*.egg-info/ 
-.installed.cfg 
-*.egg 
-*.manifest 
-*.spec 
+# PostgreSQL
+pgdata/
+*.sql
+*.dump
 
-# Installer logs 
-pip-log.txt 
-pip-delete-this-directory.txt 
+# Redis
+dump.rdb
+appendonly.aof
 
-# Unit test / coverage reports 
-htmlcov/ 
-.tox/ 
-.coverage 
-.coverage.* 
-.cache 
-.pytest_cache/ 
-nosetests.xml 
-coverage.xml 
-*.cover 
-.hypothesis/ 
 
-# Jupyter Notebook 
-.ipynb_checkpoints 
-
-# pyenv 
-.python-version 
-
-# celery 
-celerybeat-schedule.* 
-
-# SageMath parsed files 
-*.sage.py 
-
-# Environments 
-.env 
-.venv 
-env/ 
-venv/ 
-ENV/ 
-env.bak/ 
-venv.bak/ 
-
-# mkdocs documentation 
-/site 
-
-# mypy 
-.mypy_cache/ 
-
-# Sublime Text # 
-*.tmlanguage.cache 
-*.tmPreferences.cache 
-*.stTheme.cache 
-*.sublime-workspace 
-*.sublime-project 
-
-# sftp configuration file 
-sftp-config.json 
-
-# Package control specific files Package 
-Control.last-run 
-Control.ca-list 
-Control.ca-bundle 
-Control.system-ca-bundle 
-GitHub.sublime-settings 
-
-# Visual Studio Code # 
-.vscode/* 
-!.vscode/settings.json 
-!.vscode/tasks.json 
-!.vscode/launch.json 
-!.vscode/extensions.json 
-.history
+# Static files (collected by collectstatic)
+static_volume/

@@ -19,7 +19,6 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from backend.core.views import pageNotFound
 from rest_framework import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -39,8 +38,6 @@ router.registry.extend(user_router.registry)
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    path('', include('backend.core.urls')),
-
     path("api/", include(router.urls)),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='docs'), 
@@ -52,4 +49,3 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     
-handler404 = pageNotFound
