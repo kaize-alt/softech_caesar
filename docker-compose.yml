@@ -6,16 +6,12 @@ services:
     restart: always
     image: postgres:16.3-alpine
     container_name: softech-db
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env
     ports:
       - '5434:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-    networks:
-      - softech_caesar_default
 
   back:
     restart: always
@@ -24,15 +20,8 @@ services:
       dockerfile: Dockerfile
     container_name: back
     command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8002"
-    environment:
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
+    env_file:
+      - .env
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -42,28 +31,18 @@ services:
     depends_on:
       - db
       - redis
-    networks:
-      - softech_caesar_default
 
   redis:
     image: redis
     container_name: redis
-    environment:
-      REDIS_DB: ${REDIS_DB}
-      REDIS_CELERY: ${REDIS_CELERY}
 
   celery:
     restart: always
-    build: .
+    build: ./
     container_name: celery
     command: sh -c "celery -A softech worker --loglevel=info"
-    environment:
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
+    env_file:
+      - .env
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -71,21 +50,14 @@ services:
     depends_on:
       - redis
       - db
-    networks:
-      - softech_caesar_default
 
   beat:
     restart: always
-    build: .
+    build: ./
     container_name: beat
     command: sh -c "celery -A softech beat --loglevel=info"
-    environment:
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
+    env_file:
+      - .env
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -93,14 +65,10 @@ services:
     depends_on:
       - redis
       - db
-    networks:
-      - softech_caesar_default
 
 volumes:
   postgres_data:
   static_volume:
   media_volume:
 
-networks:
-  softech_caesar_default:
-    driver: bridge
+

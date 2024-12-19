@@ -8,7 +8,7 @@ from softech import settings
 
 def smtp():
     connection = get_connection(
-        host='backend.settings'.EMAIL_HOST,
+        host=settings.EMAIL_HOST,
         port=settings.EMAIL_PORT,
         username=settings.EMAIL_HOST_USER,
         password=settings.EMAIL_HOST_PASSWORD,

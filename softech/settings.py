@@ -33,7 +33,7 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -100,9 +100,9 @@ WSGI_APPLICATION = 'softech.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
+        'NAME': env('POSTGRES_DB'),
+        'USER': env('POSTGRES_USER'),
+        'PASSWORD': env('POSTGRES_PASSWORD'),
         'HOST': env('DB_HOST'),
         'PORT': env('DB_PORT'),
     }
@@ -195,15 +195,15 @@ DEFAULT_FROM_EMAIL = env("EMAIL_HOST_USER")
 SERVER_EMAIL = env("EMAIL_HOST_USER")
 EMAIL_ADMIN = env("EMAIL_HOST_USER")
 
-REDIS_HOST = env("REDIS_HOST")
-REDIS_PORT = env("REDIS_PORT")
-REDIS_DB = env("REDIS_DB")
-REDIS_CELERY_DB = env("REDIS_CELERY_DB")
+REDIS_HOST = os.environ.get("REDIS_HOST")
+REDIS_PORT = os.environ.get("REDIS_PORT")
+REDIS_DB = os.environ.get("REDIS_DB")
+REDIS_CELERY_DB = os.environ.get("REDIS_CELERY_DB")
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/0",
+        "LOCATION": "redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
@@ -212,8 +212,8 @@ CACHES = {
 
 
 # Настройки Celery
-CELERY_BROKER_URL = env("CELERY_BROKER_URL")  # URL брокера (Redis)
-CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = env("CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP")
+CELERY_BROKER_URL = f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_CELERY_DB}"  # URL брокера (Redis)
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 
 CELERY_BEAT_SCHEDULE = {

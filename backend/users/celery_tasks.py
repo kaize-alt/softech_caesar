@@ -25,7 +25,7 @@ def send_email_beat():
         subject="Test",
         body=message_text,
         from_email="amanabdukaimov@gmail.com",
-        to=['amanabdukaimov@gmail.com']
+        to=['amankaize@icloud.com']
     )
     connection.send_messages([message])
     print("mail sended")
