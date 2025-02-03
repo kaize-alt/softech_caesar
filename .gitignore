@@ -30,6 +30,7 @@ media_volume/
 
 # Virtual environments
 env/
+envs/
 venv/
 ENV/
 env.bak/
