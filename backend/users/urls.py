@@ -2,6 +2,7 @@ from rest_framework import routers
 
 from backend.users.views import UserRegisterViewSet, LoginViewSet, ResetPasswordViewSet
 
+
 user_router = routers.DefaultRouter()
 
 user_router.register(r"registry", UserRegisterViewSet, basename="registry")

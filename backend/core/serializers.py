@@ -1,19 +1,19 @@
 from rest_framework import serializers
 
 from backend.items.models import Like
-
 from .models import MainBanner, MainSettings
 
 
 class MainBannerSerializer(serializers.ModelSerializer):
     class Meta:
         model = MainBanner
-        fields = ("id", )
+        fields = ("id", "title", "text", "button_link", "order", "background_image")
 
-class LikeSerializers(serializers.ModelSerializer):
+
+class LikeSerializer(serializers.ModelSerializer):  
     class Meta:
         model = Like
-        fields = ('product', )
+        fields = ("product",)
 
 
 class PrivacyPolicySerializer(serializers.ModelSerializer):

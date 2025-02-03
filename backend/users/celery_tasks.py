@@ -17,6 +17,7 @@ def send_email(email):
     connection.send_messages([message])
     print("mail sended")
 
+
 @app.task
 def send_email_beat():
     connection = smtp()
@@ -29,4 +30,3 @@ def send_email_beat():
     )
     connection.send_messages([message])
     print("mail sended")
-

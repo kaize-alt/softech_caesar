@@ -1,31 +1,27 @@
-from http.client import HTTPResponse
-from wsgiref.util import request_uri
-
-from django.shortcuts import render
-from rest_framework import generics, mixins, viewsets, filters, status
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F, Case, When, FloatField
-
-
-from rest_framework.response import Response
-from rest_framework import permissions
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework import filters
-
-
-from .filters import ProductFilter
-from .models import *
-from .serializers import *
+from django.db.models import F, Case, When, FloatField, Sum
+from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
 
-from ..core.serializers import LikeSerializers
+from rest_framework import generics, mixins, viewsets, filters, status, permissions
+from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from .filters import ProductFilter
+from .models import Category, SubCategory, Product, Cart, CartItem, Like, Review
+from .serializers import (
+    CategorySerializer, SubCategorySerializer, ProductsBySubcategorySerializer, ProductDetailsSerializer, CartSerializer,
+    CartItemSerializer, CartItemAmountSerializer, CartItemUpdateSerializer,
+    ReviewCreateSerializer
+)
+from ..core.serializers import LikeSerializer
 
 
 class CategoryViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = [JWTAuthentication,]
+    authentication_classes = [JWTAuthentication]
 
 
 class SubCategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
@@ -40,8 +36,8 @@ class ProductsBySubcategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericVi
 
     def retrieve(self, request, *args, **kwargs):
         subcategory = self.get_object()
-        products = subcategory.products.all()  # Получение продуктов, связанных с подкатегорией
-        ordering = self.request.query_params.get('ordering')
+        products = subcategory.products.all()
+        ordering = request.query_params.get('ordering')
 
         if ordering in ['price', '-price', 'created_at', '-created_at']:
             products = products.order_by(ordering)
@@ -52,15 +48,15 @@ class ProductsBySubcategoryViewSet(mixins.RetrieveModelMixin, viewsets.GenericVi
         return Response(data)
 
 
-
 class ProductSearchViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = Product.objects.prefetch_related('product_image', 'reviews__user').all()
-    serializer_class = ProductSearchSerializer
+    serializer_class = ProductDetailsSerializer
     filter_backends = (DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter)
     filterset_class = ProductFilter
-    search_fields = {"name": ["icontains"]}
-    ordering_fields = ['price', 'created_at']  # Поля для сортировки
+    search_fields = ['name']
+    ordering_fields = ['price', 'created_at']
     ordering = ['-created_at']
+
 
 class ProductDetailsViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     queryset = Product.objects.all()
@@ -74,24 +70,19 @@ class CartViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 
     def create(self, request, *args, **kwargs):
         user = request.user
-        print(user)
-        items = request.data.get("items", [])
-
+        items = request.data.get('items', [])
         cart, _ = Cart.objects.get_or_create(user=user)
-        print(cart)
+
         for item in items:
-            product_id = item.get("product")
-            print(product_id)
-            amount = item.get("amount", 1)
+            product_id = item.get('product')
+            amount = item.get('amount', 1)
 
             try:
                 product = Product.objects.get(id=product_id)
-                print(product)
             except Product.DoesNotExist:
                 return Response({"error": f"Продукт с ID {product_id} не найден"}, status=400)
 
             cart_item, _ = CartItem.objects.get_or_create(cart=cart, product=product)
-            print("Nomad")
             cart_item.amount += amount
             cart_item.save(update_fields=["amount"])
 
@@ -101,7 +92,8 @@ class CartViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = CartItem.objects.all()
     serializer_class = CartItemSerializer
-    authentication_classes = [JWTAuthentication,]
+    authentication_classes = [JWTAuthentication]
+
     def destroy(self, request, *args, **kwargs):
         user = request.user
 
@@ -110,7 +102,7 @@ class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
         except Cart.DoesNotExist:
             return Response({"error": "Корзина пользователя не найдена"}, status=status.HTTP_404_NOT_FOUND)
 
-        product_id = kwargs.get("pk")
+        product_id = self.kwargs.get("pk")
 
         if not product_id:
             return Response({"error": "Поле product не указано в URL"}, status=status.HTTP_400_BAD_REQUEST)
@@ -123,13 +115,12 @@ class CartItemViewSet(mixins.DestroyModelMixin, viewsets.GenericViewSet):
             return Response({"error": "Товар не найден в корзине"}, status=status.HTTP_404_NOT_FOUND)
 
 
-class CardItemListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+class CartItemListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = CartItemAmountSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        user = self.request.user
-        return CartItem.objects.filter(cart__user=user)
+        return CartItem.objects.filter(cart__user=self.request.user)
 
 
 class CartItemUpdateViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
@@ -138,9 +129,7 @@ class CartItemUpdateViewSet(mixins.UpdateModelMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        user = self.request.user
-        cart = self.request.user.cart
-        return CartItem.objects.filter(cart__user=user, cart=cart)
+        return CartItem.objects.filter(cart__user=self.request.user)
 
 
 class CartTotalPriceViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -148,18 +137,17 @@ class CartTotalPriceViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def list(self, request, *args, **kwargs):
-        cart = request.user.cart
-
-        total_price = 0
-        for item in cart.items.all():
-            total_price += item.total_price
-
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            return Response({"error": "Корзина не найдена"}, status=status.HTTP_404_NOT_FOUND)
+        
+        total_price = cart.items.aggregate(total=Sum(F('amount') * F('product__price')))['total'] or 0
         return Response({"total_price": total_price})
 
 
 class LikeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Like.objects.all()
-    serializer_class = LikeSerializers
+    serializer_class = LikeSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def create(self, request, *args, **kwargs):
@@ -168,14 +156,13 @@ class LikeViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         like = Like.objects.create(user=user, product=product)
         like.is_like = True
         like.save()
-
         return Response(status=status.HTTP_201_CREATED)
-    
+
+
 class ReviewCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewCreateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        """Автоматически добавляем пользователя в данные"""
         serializer.save(user=self.request.user)

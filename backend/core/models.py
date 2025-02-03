@@ -5,7 +5,7 @@ class MainBanner(models.Model):
     background_image = models.ImageField("Фоновая картинка", upload_to="mainbanner")
     title = models.CharField("Заголовок", max_length=255)
     text = models.TextField("Текст")
-    button_link = models.CharField("Ссылка кнопки", max_length=255, null=True, blank=True)
+    button_link = models.URLField("Ссылка кнопки", max_length=255, null=True, blank=True)
     order = models.PositiveIntegerField("Порядок", default=1)
 
     class Meta:
@@ -26,7 +26,7 @@ class AddsBlock(models.Model):
     class Meta:
         verbose_name = "Рекламный блок"
         verbose_name_plural = "Рекламные блоки"
-        ordering = ["order"]
+        ordering = ("order",)
 
     def __str__(self):
         return self.title
@@ -35,7 +35,7 @@ class AddsBlock(models.Model):
 class Introduction(models.Model):
     icon = models.ImageField("Иконка компании", upload_to="introduction")
     text = models.CharField("Описание компании", max_length=255)
-    btn_link = models.CharField("Кнопка подробнее", max_length=50)
+    btn_link = models.URLField("Кнопка подробнее", max_length=255, null=True, blank=True)
 
     class Meta:
         verbose_name = "О нас"
@@ -56,8 +56,9 @@ class Videos(models.Model):
     def __str__(self):
         return self.title
 
+
 class MainSettings(models.Model):
-    privacy_policy = models.FileField("Политика конфиденциальности")
+    privacy_policy = models.FileField("Политика конфиденциальности", upload_to="settings", null=True, blank=True)
 
     class Meta:
         verbose_name = "Основная настройка"

@@ -5,6 +5,7 @@ from rest_framework import routers
 
 from .views import *
 
+
 items_router = routers.DefaultRouter()
 
 items_router.register(r"Category", CategoryViewSet, basename="category")
@@ -14,7 +15,7 @@ items_router.register(r"product_search", ProductSearchViewSet, basename="product
 items_router.register(r"product_details", ProductDetailsViewSet, basename="product_details")
 items_router.register(r"cart", CartViewSet, basename="cart")
 items_router.register(r"item_delete", CartItemViewSet, basename="item_delete")
-items_router.register(r"cart_list", CardItemListViewSet, basename="cart_list")
+items_router.register(r"cart_list", CartItemListViewSet, basename="cart_list")
 items_router.register(r"cart_item_update", CartItemUpdateViewSet, basename="cart_item_update")
 items_router.register(r"cart_total_price", CartTotalPriceViewSet, basename="cart_total_price")
 items_router.register(r"like", LikeViewSet, basename="like")

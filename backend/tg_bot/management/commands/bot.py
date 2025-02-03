@@ -1,14 +1,15 @@
-import telebot 
-from django.core.management.base import BaseCommand 
-from django.utils.html import strip_tags 
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton 
-from backend.items.models import * 
-from backend.users.models import * 
+import telebot
+from django.core.management.base import BaseCommand
+from django.utils.html import strip_tags
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from backend.items.models import Category, Product
+from backend.users.models import CustomUser
+from backend.cart.models import Cart, CartItem
 from softech import settings
 
-bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN)  #SoftechConsult_bot
+bot = telebot.TeleBot(settings.TELEGRAM_BOT_TOKEN)  # SoftechConsult_bot
 
-help = (
+HELP_TEXT = (
     "/start - Запуск бота \n"
     "/help - Получить информацию о боте\n"
     "/cart - Показать товары в корзине\n"
@@ -67,11 +68,9 @@ def handle_contact(message):
         )
 
 
-
-
 @bot.message_handler(commands=['help'])
 def help(message):
-    text = help
+    text = HELP_TEXT
     bot.send_message(message.chat.id, text)
 
 
@@ -81,10 +80,10 @@ def category_list_get(call):
     markup = InlineKeyboardMarkup()
     for category in parent_category_list:
         markup.add(
-            InlineKeyboardButton(text=category.name,
-                                       callback_data=f"subcategory_{category.id}")
+            InlineKeyboardButton(text=category.name, callback_data=f"subcategory_{category.id}")
         )
     bot.send_message(call.message.chat.id, "Список категорий", reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("subcategory_"))
 def subcategory_list_get(call):
@@ -93,8 +92,7 @@ def subcategory_list_get(call):
     markup = InlineKeyboardMarkup()
     for sub_category in subcategory_list:
         markup.add(
-            InlineKeyboardButton(text=sub_category.name,
-                                       callback_data=f"items_{sub_category.id}")
+            InlineKeyboardButton(text=sub_category.name, callback_data=f"items_{sub_category.id}")
         )
     bot.send_message(call.message.chat.id, "Список подкатегорий", reply_markup=markup)
 
@@ -104,26 +102,29 @@ def items_list_get(call):
     subcategory_id = Category.objects.get(id=call.data.split('_')[1])
     items_list = Product.objects.filter(category=subcategory_id)
     if not items_list.exists():
-         bot.send_message(call.message.chat.id, "Продукты не найдены.")
+        bot.send_message(call.message.chat.id, "Продукты не найдены.")
     else:
         markup = InlineKeyboardMarkup()
-    for item in items_list:
-        markup.add(
-            InlineKeyboardButton(text=item.name,callback_data=f"productInfo_{item.id}")
-        )
-    bot.send_message(call.message.chat.id, "Список продуктов", reply_markup=markup)
+        for item in items_list:
+            markup.add(
+                InlineKeyboardButton(text=item.name, callback_data=f"productInfo_{item.id}")
+            )
+        bot.send_message(call.message.chat.id, "Список продуктов", reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("productInfo"))
 def product_info_get(call):
-    product = Product.objects.filter(id=call.data.split("_")[1])
-    text = f"{product[0].name}\n{strip_tags(product[0].description)}\n{product[0].price}"
-    markup = InlineKeyboardMarkup()
-    subcategory_id = product[0].category.id
-    markup.add(
-        InlineKeyboardButton(text="назад", callback_data=f"items_{subcategory_id}"),
-        InlineKeyboardButton(text="добавить в корзину", callback_data=f"cart_{product[0].id}")
-    )
-    bot.send_message(call.message.chat.id, text, reply_markup=markup)
+    product = Product.objects.filter(id=call.data.split("_")[1]).first()
+    if product:
+        text = f"{product.name}\n{strip_tags(product.description)}\n{product.price}"
+        markup = InlineKeyboardMarkup()
+        subcategory_id = product.category.id
+        markup.add(
+            InlineKeyboardButton(text="назад", callback_data=f"items_{subcategory_id}"),
+            InlineKeyboardButton(text="добавить в корзину", callback_data=f"cart_{product.id}")
+        )
+        bot.send_message(call.message.chat.id, text, reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("cart_"))
 def cart(call):
@@ -167,13 +168,9 @@ def order(call):
         print(e)
 
 
-
 class Command(BaseCommand):
     help = 'Запуск Telegram-бота'
 
     def handle(self, *args, **kwargs):
         self.stdout.write(self.style.SUCCESS("Запуск Telegram-бота..."))
         bot.infinity_polling(none_stop=True)
-
-
-

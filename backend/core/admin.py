@@ -9,5 +9,5 @@ class MainBannerAdmin(admin.ModelAdmin):
 
 
 @admin.register(MainSettings)
-class MainBannerAdmin(admin.ModelAdmin):
+class MainSettingsAdmin(admin.ModelAdmin):
     pass

@@ -7,7 +7,7 @@ services:
     image: postgres:16.3-alpine
     container_name: softech-db
     env_file:
-      - .env
+      - envs/.env_prod
     ports:
       - '5434:5432'
     volumes:
@@ -21,7 +21,7 @@ services:
     container_name: back
     command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && python manage.py runserver 0.0.0.0:8002"
     env_file:
-      - .env
+      - envs/.env_prod
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -42,7 +42,7 @@ services:
     container_name: celery
     command: sh -c "celery -A softech worker --loglevel=info"
     env_file:
-      - .env
+      - envs/.env_prod
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -57,7 +57,7 @@ services:
     container_name: beat
     command: sh -c "celery -A softech beat --loglevel=info"
     env_file:
-      - .env
+      - envs/.env_prod
     volumes:
       - ./:/app
       - ./static_volume:/app/staticfiles
@@ -70,5 +70,3 @@ volumes:
   postgres_data:
   static_volume:
   media_volume:
-
-
